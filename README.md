@@ -9,26 +9,33 @@
 
 ## 安装
 
-### 从 GitHub 安装
+### 从 GitHub 安装（推荐）
 
 ```powershell
-dsh plugin add github:SUZUNAMI/dsh-workspace-hide#v0.1.2
+dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.2
 ```
 
 `dsh plugin add` 本质就是在 profile 目录（`~/.dsh/profiles/web`）里跑一次 `pnpm add`，
 并**同时**把包名写进 `dependencies` 与 `dsh.profile.bundles` 两处；`dsh plugin remove`
-会把两处一起清掉。因此 pnpm 认识的任何目标形式都能用：
+会把两处一起清掉。
 
-| 形式 | 命令 |
-|---|---|
-| 钉 tag（推荐） | `dsh plugin add github:SUZUNAMI/dsh-workspace-hide#v0.1.2` |
-| 钉 commit（最稳） | `dsh plugin add github:SUZUNAMI/dsh-workspace-hide#<full-sha>` |
-| 跟随 `main` | `dsh plugin add https://github.com/SUZUNAMI/dsh-workspace-hide` |
-| 本地目录（改代码时） | `dsh plugin add file:C:/path/to/dsh-workspace-hide` |
+各种目标形式的实测结果：
+
+| 形式 | 命令 | 说明 |
+|---|---|---|
+| **tarball（推荐）** | `dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.2` | 不经过 git，不需要 SSH 密钥，走 `codeload.github.com`；实测 1.6s |
+| `git+https` | `dsh plugin add git+https://github.com/SUZUNAMI/dsh-workspace-hide.git#v0.1.2` | 走 https git；需要能连上 `github.com:443` |
+| `github:` | `dsh plugin add github:SUZUNAMI/dsh-workspace-hide#v0.1.2` | ⚠️ **pnpm 会把它解析成 `git+ssh://`**（见下），需要本机已配好 GitHub SSH 密钥与 `known_hosts` |
+| 跟随 `main` | `dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/heads/main` | 上游随时会变，不建议 |
+| 本地目录（改代码时） | `dsh plugin add file:C:/path/to/dsh-workspace-hide` | 直接软链/硬链到工作副本 |
+
+> **关于 `github:` 形式**：pnpm 对它的解析目标是
+> `git+ssh://git@github.com/<owner>/<repo>.git`，所以一台没配过 GitHub SSH 的机器
+> 会直接 `Host key verification failed`。tarball 形式没有这个问题，因此列为推荐。
 
 装完**重启 DSH Desktop**，再打开「设置」，左侧应出现「隐藏的工作区」。
 
-第三方插件建议钉 tag 或 commit：跟随 `main` 意味着上游随时可能把你的环境改掉。
+第三方插件建议钉 tag 或 commit，不要跟随 `main`。
 
 ### 手动安装
 
@@ -37,7 +44,7 @@ dsh plugin add github:SUZUNAMI/dsh-workspace-hide#v0.1.2
 ```jsonc
 {
   "dependencies": {
-    "dsh-workspace-hide": "github:SUZUNAMI/dsh-workspace-hide#v0.1.2"
+    "dsh-workspace-hide": "https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.2"
   },
   "dsh": {
     "profile": {
