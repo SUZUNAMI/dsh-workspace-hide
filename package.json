@@ -24,7 +24,11 @@
   ],
   "scripts": {
     "check": "node --check lib/index.js && node --check lib/client.js",
-    "test": "node test/offline-check.mjs"
+    "test": "node test/offline-check.mjs",
+    "prepublishOnly": "npm run check && npm test"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
   },
   "dsh": {
     "bundle": {
@@ -52,5 +56,9 @@
     "cordis.patch.yml",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }
