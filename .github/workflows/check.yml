@@ -1,0 +1,30 @@
+name: offline-check
+
+# The plugin has no dependencies and no build step, so CI only has to prove two
+# things: the two bundles parse, and the stubbed end-to-end harness still passes.
+# No DSH process, no browser, no network.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          node --check lib/index.js
+          node --check lib/client.js
+      - name: Offline behaviour tests
+        run: node test/offline-check.mjs

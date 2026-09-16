@@ -1,0 +1,17 @@
+# Normalise line endings in the repository, not on each developer's machine.
+# Without this, a Windows checkout with core.autocrlf=true would rewrite every
+# file to CRLF on checkout and produce whole-file diffs against a Linux clone.
+* text=auto eol=lf
+
+# Windows-only helpers, if any are ever added here, keep CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary assets: never touch.
+*.png binary
+*.jpg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

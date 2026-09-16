@@ -1,0 +1,56 @@
+{
+  "name": "dsh-workspace-hide",
+  "version": "0.1.2",
+  "description": "Hide selected workspaces from the DSH sidebar without deleting anything: local-only, reversible, with a Settings management page.",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "author": "SUZUNAMI",
+  "homepage": "https://github.com/SUZUNAMI/dsh-workspace-hide#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SUZUNAMI/dsh-workspace-hide.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SUZUNAMI/dsh-workspace-hide/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "workspace",
+    "hide",
+    "sidebar"
+  ],
+  "scripts": {
+    "check": "node --check lib/index.js && node --check lib/client.js",
+    "test": "node test/offline-check.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "slots",
+        "workspaces",
+        "locale"
+      ],
+      "platform": "web"
+    }
+  },
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ]
+}

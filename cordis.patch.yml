@@ -1,0 +1,9 @@
+# dsh bundle patch: inserts dsh-workspace-hide into the profile's layer stack.
+#
+# Deliberately an `insert` only -- nothing is disabled, no core service is
+# replaced. The plugin is a pure client-side overlay on the `workspaces`
+# service, so the host half stays empty and the sidebar keeps its official
+# implementation.
+- insert:
+    - id: dsh-workspace-hide
+      name: 'dsh-workspace-hide'
