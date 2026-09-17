@@ -39,16 +39,16 @@ DSH 内置的「删除工作区」其实也不删数据，但它的心智负担�
 
 ## 安装
 
-### 从 npm 安装
+### 从 npm 安装（推荐）
 
 ```powershell
-dsh plugin add dsh-workspace-hide@0.1.2
+dsh plugin add dsh-workspace-hide@0.1.3
 ```
 
 ### 从 GitHub 安装
 
 ```powershell
-dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.2
+dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.3
 ```
 
 `dsh plugin add` 本质就是在 profile 目录（`~/.dsh/profiles/web`）里跑一次 `pnpm add`，
@@ -59,10 +59,10 @@ dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/re
 
 | 形式 | 命令 | 说明 |
 |---|---|---|
-| **npm** | `dsh plugin add dsh-workspace-hide@0.1.2` | 最短；只依赖 `registry.npmjs.org` |
-| **tarball（推荐）** | `dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.2` | 不经过 git，不需要 SSH 密钥，走 `codeload.github.com`；实测 1.6s |
-| `git+https` | `dsh plugin add git+https://github.com/SUZUNAMI/dsh-workspace-hide.git#v0.1.2` | 走 https git；需要能连上 `github.com:443` |
-| `github:` | `dsh plugin add github:SUZUNAMI/dsh-workspace-hide#v0.1.2` | ⚠️ **pnpm 会把它解析成 `git+ssh://`**（见下），需要本机已配好 GitHub SSH 密钥与 `known_hosts` |
+| **npm（推荐）** | `dsh plugin add dsh-workspace-hide@0.1.3` | 最短；只依赖 `registry.npmjs.org`，不碰 `github.com` |
+| **tarball** | `dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.3` | 不经过 git，不需要 SSH 密钥，走 `codeload.github.com`；实测 1.6s |
+| `git+https` | `dsh plugin add git+https://github.com/SUZUNAMI/dsh-workspace-hide.git#v0.1.3` | 走 https git；需要能连上 `github.com:443` |
+| `github:` | `dsh plugin add github:SUZUNAMI/dsh-workspace-hide#v0.1.3` | ⚠️ **pnpm 会把它解析成 `git+ssh://`**（见下），需要本机已配好 GitHub SSH 密钥与 `known_hosts` |
 | 跟随 `main` | `dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/heads/main` | 上游随时会变，不建议 |
 | 本地目录（改代码时） | `dsh plugin add file:C:/path/to/dsh-workspace-hide` | 直接软链/硬链到工作副本 |
 
@@ -81,7 +81,7 @@ dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/re
 ```jsonc
 {
   "dependencies": {
-    "dsh-workspace-hide": "0.1.2"
+    "dsh-workspace-hide": "0.1.3"
   },
   "dsh": {
     "profile": {
@@ -102,6 +102,13 @@ dependencies —— 那反而可能装进第二份 react 实例。
 ---
 
 ## 版本更新
+
+### 0.1.3 — 发布流程与文档
+
+插件行为**无变化**。这一版把发布方式换成 GitHub Actions 的 OIDC 可信发布
+（`.github/workflows/release.yml`，仓库里不再需要任何长期 npm token），
+并把 npm 安装提升为推荐方式 —— npm 只依赖 `registry.npmjs.org`，
+不像 tarball / git 形式那样要求 `github.com` 可达。
 
 ### 0.1.2 — 首个公开发布版本
 
