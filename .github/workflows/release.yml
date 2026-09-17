@@ -1,0 +1,76 @@
+name: release
+
+# Publishes to npm through trusted publishing (GitHub OIDC).
+# There is no NPM_TOKEN in this repository and there should never be one: the
+# runner mints a short-lived OIDC token, npm exchanges it for a publish
+# credential that expires with the job, and provenance is generated for free.
+#
+# Before this can publish, a trusted publisher must exist on npmjs.com for the
+# `dsh-workspace-hide` package (Package -> Settings -> Trusted publishing):
+#
+#   Provider           GitHub Actions
+#   Organization/user  SUZUNAMI
+#   Repository         dsh-workspace-hide
+#   Workflow filename  release.yml
+#   Environment        (leave empty)
+#
+# The workflow filename must match this file's name exactly, and the publisher
+# config only applies to future runs — neither can be retrofitted afterwards.
+#
+# Cutting a release: bump "version" in package.json, commit and push, then push
+# a matching tag (`git tag v0.1.3 && git push origin v0.1.3`).
+
+on:
+  push:
+    tags: ['v*']
+  # Escape hatch for a failed publish: `gh run rerun <id>` is preferred, since a
+  # dispatch from a branch would publish whatever version that branch carries.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # The one permission trusted publishing needs, and the only reason this
+  # workflow can authenticate without a secret.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing needs npm >= 11.5.1, and the version bundled with the
+      # runner image is not guaranteed to clear that bar. An outdated npm fails
+      # the publish with a misleading "Access token expired or revoked / 404".
+      - name: Update npm
+        run: |
+          npm install -g npm@latest
+          npm --version
+
+      # Refuse to publish a tag whose contents claim a different version, so a
+      # mislabelled tag fails loudly instead of shipping the wrong release.
+      - name: Tag must match package.json version
+        if: github.ref_type == 'tag'
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF_NAME}" != "$expected" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match package.json ($expected)"
+            exit 1
+          fi
+          echo "publishing ${GITHUB_REF_NAME}"
+
+      # No `npm ci`: the package has no dependencies and the repository carries
+      # no lock file. `prepublishOnly` runs `npm run check && npm test`, so the
+      # offline suite gates the publish even when the push-triggered
+      # offline-check workflow is skipped for a tag-only push.
+      #
+      # No `--provenance`: trusted publishing already attaches a provenance
+      # attestation automatically; passing the flag as well is redundant.
+      # No `--access public`: publishConfig.access in package.json already says so.
+      - name: Publish
+        run: npm publish
