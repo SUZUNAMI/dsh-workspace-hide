@@ -1,6 +1,6 @@
 {
   "name": "dsh-workspace-hide",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Hide selected workspaces from the DSH sidebar without deleting anything: local-only, reversible, with a Settings management page.",
   "type": "module",
   "main": "lib/index.js",

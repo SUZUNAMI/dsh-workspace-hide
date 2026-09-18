@@ -47,13 +47,13 @@ DSH 内置的「删除工作区」其实也不删数据，但它的心智负担�
 ### 从 npm 安装（推荐）
 
 ```powershell
-dsh plugin add dsh-workspace-hide@0.1.3
+dsh plugin add dsh-workspace-hide@0.2.0
 ```
 
 ### 从 GitHub 安装
 
 ```powershell
-dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.3
+dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.2.0
 ```
 
 `dsh plugin add` 本质就是在 profile 目录（`~/.dsh/profiles/web`）里跑一次 `pnpm add`，
@@ -64,16 +64,32 @@ dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/re
 
 | 形式 | 命令 | 说明 |
 |---|---|---|
-| **npm（推荐）** | `dsh plugin add dsh-workspace-hide@0.1.3` | 最短；只依赖 `registry.npmjs.org`，不碰 `github.com` |
-| **tarball** | `dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.1.3` | 不经过 git，不需要 SSH 密钥，走 `codeload.github.com`；实测 1.6s |
-| `git+https` | `dsh plugin add git+https://github.com/SUZUNAMI/dsh-workspace-hide.git#v0.1.3` | 走 https git；需要能连上 `github.com:443` |
-| `github:` | `dsh plugin add github:SUZUNAMI/dsh-workspace-hide#v0.1.3` | ⚠️ **pnpm 会把它解析成 `git+ssh://`**（见下），需要本机已配好 GitHub SSH 密钥与 `known_hosts` |
+| **npm（推荐）** | `dsh plugin add dsh-workspace-hide@0.2.0` | 最短；只依赖 `registry.npmjs.org`，不碰 `github.com` |
+| **tarball** | `dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/tags/v0.2.0` | 不经过 git，不需要 SSH 密钥，走 `codeload.github.com`；实测 1.6s |
+| `git+https` | `dsh plugin add git+https://github.com/SUZUNAMI/dsh-workspace-hide.git#v0.2.0` | 走 https git；需要能连上 `github.com:443` |
+| `github:` | `dsh plugin add github:SUZUNAMI/dsh-workspace-hide#v0.2.0` | ⚠️ **pnpm 会把它解析成 `git+ssh://`**（见下），需要本机已配好 GitHub SSH 密钥与 `known_hosts` |
 | 跟随 `main` | `dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/refs/heads/main` | 上游随时会变，不建议 |
-| 本地目录（改代码时） | `dsh plugin add file:C:/path/to/dsh-workspace-hide` | 直接软链/硬链到工作副本 |
+| 本地目录（改代码时） | `dsh plugin add file:C:/path/to/dsh-workspace-hide` | ⚠️ **只在安装那一刻物化一份**，之后改源码不会同步（见下） |
 
 > **关于 `github:` 形式**：pnpm 对它的解析目标是
 > `git+ssh://git@github.com/<owner>/<repo>.git`，所以一台没配过 GitHub SSH 的机器
 > 会直接 `Host key verification failed`。tarball 形式没有这个问题。
+
+> **关于 `file:` 本地目录形式（改代码必读）**：pnpm 对 `file:` 目录依赖**只在安装那一刻**
+> 把文件拷/硬链进 `node_modules`，之后你改源码它一无所知——`node_modules/dsh-workspace-hide`
+> 里躺着的仍是安装时的旧快照。实测踩过一次：源码已经改到 43365 B，profile 里那份还是
+> 42010 B 的旧文件，重启多少次界面都不变。
+>
+> 想边改边用，就在装完之后把那份副本换成指向工作副本的**目录联接**（junction，不需要管理员权限）：
+>
+> ```powershell
+> $dst = "$env:USERPROFILE\.dsh\profiles\web\node_modules\dsh-workspace-hide"
+> Move-Item $dst "$dst.bak"                                    # 先备份旧副本
+> New-Item -ItemType Junction -Path $dst -Target "C:/path/to/dsh-workspace-hide"
+> ```
+>
+> 这样改源码后**重启 DSH Desktop** 即生效。注意以后跑 `pnpm install` 或
+> `dsh plugin add/remove` 可能把它换回实体拷贝，那时重建一次即可。
 
 装完**重启 DSH Desktop**，再打开「设置」，左侧应出现「工作区显示」。
 
@@ -86,7 +102,7 @@ dsh plugin add https://codeload.github.com/SUZUNAMI/dsh-workspace-hide/tar.gz/re
 ```jsonc
 {
   "dependencies": {
-    "dsh-workspace-hide": "0.1.3"
+    "dsh-workspace-hide": "0.2.0"
   },
   "dsh": {
     "profile": {
@@ -108,10 +124,7 @@ dependencies —— 那反而可能装进第二份 react 实例。
 
 ## 版本更新
 
-### 未发布 — 设置页开关反转为「显示」语义
-
-> 只在本地工作区生效，**尚未发到 npm**（npm 上的 `latest` 仍是 0.1.3，行为是旧语义）。
-> 下次发版时这一节会并入正式版本号。
+### 0.2.0 — 设置页开关反转为「显示」语义
 
 - 设置项改名：「隐藏的工作区」→ 面板标题「**侧边栏显示的工作区**」，导航栏短标签
   「**工作区显示**」（导航栏放不下全称，会被截成「侧边栏显示的工…」）；并加了一行说明。

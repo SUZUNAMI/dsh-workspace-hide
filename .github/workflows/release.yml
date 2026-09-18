@@ -18,7 +18,7 @@ name: release
 # config only applies to future runs — neither can be retrofitted afterwards.
 #
 # Cutting a release: bump "version" in package.json, commit and push, then push
-# a matching tag (`git tag v0.1.3 && git push origin v0.1.3`).
+# a matching tag (`git tag v0.2.0 && git push origin v0.2.0`).
 
 on:
   push:
