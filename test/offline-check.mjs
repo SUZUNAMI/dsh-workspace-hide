@@ -63,10 +63,17 @@ function render(node) {
 	return render(props?.children);
 }
 
+// Every Switch the naive renderer walks past, in render order. The renderer
+// drops props, so this is the only way to reach `onChange` and prove the
+// polarity wiring (on = shown) rather than just its rendered label.
+const switchProps = [];
+
 const primitivesStub = {
 	Button: ({ children, ...rest }) => reactStub.createElement("button", rest, children),
-	Switch: ({ label, checked }) =>
-		reactStub.createElement("span", null, `[switch:${checked ? "on" : "off"}:${label ?? ""}]`),
+	Switch: ({ label, checked, onChange }) => {
+		switchProps.push({ label, checked, onChange });
+		return reactStub.createElement("span", null, `[switch:${checked ? "on" : "off"}:${label ?? ""}]`);
+	},
 	Tag: ({ children }) => reactStub.createElement("span", null, `[tag:${children ?? ""}]`),
 	IconFolderOpen16: () => reactStub.createElement("svg", null)
 };
@@ -346,7 +353,15 @@ section("scenario 1: hide/unhide with a full archive bridge");
 	eq(reg.options.name, "settings.section", "registers into settings.section");
 	eq(reg.options.id, "workspace-hide", "list slot has an id");
 	eq(reg.options.order, 19, "order is 19");
-	eq(reg.options.label(), "隐藏的工作区", "label resolves through the zh dictionary");
+	const railLabel = reg.options.label();
+	eq(railLabel, "工作区显示", "label resolves through the zh dictionary");
+	// 设置页左侧导航栏会把长标签截断成「侧边栏显示的工…」，中文标签必须短。
+	ok(railLabel.length <= 6, `rail label stays short enough for the settings nav (${railLabel.length} chars)`);
+	eq(ctx.dictionaries[0].dict.en["section.label"], "Workspace visibility", "en rail label mirrors the short zh one");
+	ok(
+		ctx.dictionaries[0].dict.en["section.title"].length > ctx.dictionaries[0].dict.en["section.label"].length,
+		"the full wording lives in section.title, not in the nav label"
+	);
 
 	const api = test.resolveApi(ctx);
 	ok(api.canArchive === true && api.canRestore === true, "both archive + restore detected");
@@ -405,18 +420,26 @@ section("scenario 1: hide/unhide with a full archive bridge");
 	ok(test.getManageSnapshot() === manage, "manage snapshot is referentially stable");
 
 	// --- shallow render
+	switchProps.length = 0;
 	const rendered = render(reactStub.createElement(reg.component, { t }));
-	ok(rendered.includes("隐藏的工作区"), "section renders its title");
-	ok(rendered.includes("已隐藏 1 个工作区"), "section reports the hidden count");
+	ok(rendered.includes("侧边栏显示的工作区"), "section renders its title");
+	ok(rendered.includes("共 4 个 · 显示 3 个 · 隐藏 1 个"), "section reports shown/hidden counts");
 	ok(rendered.includes("Alpha") && rendered.includes("Beta") && rendered.includes("Delta"), "section lists every workspace");
 	ok(rendered.includes("C:\\work\\beta"), "section shows the folder path");
 	ok(rendered.includes("[tag:已隐藏]"), "hidden row carries a badge");
 	ok(rendered.includes("[tag:已归档 2 个会话]"), "hidden row reports how many sessions were archived");
 	ok(rendered.includes("Gamma") === false && rendered.includes("C:\\work\\gamma"), "untitled workspace falls back to its path");
 	eq((rendered.match(/\[switch:/g) ?? []).length, 4, "one switch per workspace");
-	ok(rendered.includes("[switch:on:"), "hidden workspace switch is on");
 	ok(!rendered.includes("未能自动取消归档"), "no pending warning when everything restored cleanly");
 	ok(!rendered.includes("未检测到"), "no display-only warning while a restore path exists");
+
+	// --- switch polarity: ON means "shown in the sidebar", not "hidden"
+	eq(switchProps.length, 4, "the renderer saw one switch per workspace");
+	eq(switchProps.filter((s) => s.checked === true).length, 3, "shown workspaces have their switch ON");
+	eq(switchProps.filter((s) => s.checked !== true).length, 1, "the hidden workspace is the only switch OFF");
+	ok(switchProps.filter((s) => s.checked !== true)[0].label.includes("Beta"), "the OFF switch belongs to the hidden workspace");
+	ok(switchProps.every((s) => s.label.includes("在侧边栏显示")), "switch name states shown-ness, never hidden-ness");
+	ok(rendered.indexOf("Beta") > rendered.indexOf("Delta"), "hidden rows sink below shown rows");
 
 	// --- unhide restores exactly the recorded sessions
 	await test.showWorkspace("ws-beta");
@@ -440,6 +463,23 @@ section("scenario 1: hide/unhide with a full archive bridge");
 	ok(notified > notifiedBefore, "restoreAll notified subscribers");
 	deepEq(JSON.parse(storage.map.get("dsh-workspace-hide.hidden.v2")), { hidden: {}, pending: [] }, "restoreAll clears the record");
 	deepEq(model.peek().archivedSessionIds, [], "restoreAll unarchived everything it archived");
+
+	// --- switch polarity, live: OFF must hide, ON must show
+	switchProps.length = 0;
+	render(reactStub.createElement(reg.component, { t }));
+	eq(switchProps.length, 4, "all four switches render once nothing is hidden");
+	ok(switchProps.every((s) => s.checked === true), "after 全部显示 every switch reads ON");
+	const alphaSwitch = switchProps.find((s) => s.label.includes("Alpha"));
+	await alphaSwitch.onChange(false);
+	await tick();
+	ok(test.isHidden("ws-alpha"), "turning a switch OFF hides that workspace");
+	eq(model.getSnapshot().items.length, 3, "and it leaves the sidebar");
+	await alphaSwitch.onChange(true);
+	await tick();
+	ok(!test.isHidden("ws-alpha"), "turning it back ON shows the workspace again");
+	eq(model.getSnapshot().items.length, 4, "and it comes back");
+	deepEq(JSON.parse(storage.map.get("dsh-workspace-hide.hidden.v2")), { hidden: {}, pending: [] },
+		"the round trip leaves the record empty");
 
 	// --- stale entries in the manage view
 	await test.hideWorkspace("ws-vanished");
@@ -727,7 +767,7 @@ section("scenario 1e: failed unarchive -> pending + retry");
 	const rendered = render(reactStub.createElement(ctx.registrations[0].component, { t }));
 	ok(rendered.includes("未能自动取消归档"), "settings page warns about the pending sessions");
 	ok(rendered.includes("重试恢复") && rendered.includes("忽略"), "retry + dismiss buttons rendered");
-	ok(rendered.includes("全部恢复"), "restore-all is enabled so pending ids are reachable too");
+	ok(rendered.includes("全部显示"), "restore-all is enabled so pending ids are reachable too");
 
 	// retry succeeds once the host recovers
 	registry.failUnarchive.value = false;
@@ -822,9 +862,9 @@ section("scenario 3: primitives unavailable (fallback controls)");
 	await bundle.exports.__test.hideWorkspace("ws-alpha");
 	const reg = ctx.registrations[0];
 	const rendered = render(reactStub.createElement(reg.component, { t: ctx.locale.bind("workspace-hide") }));
-	ok(rendered.includes("隐藏的工作区"), "fallback path still renders the title");
-	ok(rendered.includes("已隐藏 1 个工作区"), "fallback path still reports the count");
-	ok(rendered.includes("全部恢复"), "fallback path renders the restore button");
+	ok(rendered.includes("侧边栏显示的工作区"), "fallback path still renders the title");
+	ok(rendered.includes("共 3 个 · 显示 2 个 · 隐藏 1 个"), "fallback path still reports the count");
+	ok(rendered.includes("全部显示"), "fallback path renders the restore button");
 	ok(rendered.includes("已隐藏"), "fallback path renders a badge");
 	dispose();
 }
